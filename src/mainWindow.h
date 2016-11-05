@@ -9,6 +9,8 @@
 
 class DiagramScene;
 class FileHandler;
+class QListWidgetItem;
+class QLabel;
 
 namespace Ui
 {
@@ -25,7 +27,10 @@ class MainWindow : public QMainWindow
 
   protected slots:
     void showAbout();
-    void setFilenameToStatusBar(const QString& filename);
+    void showHelp();
+    void setLoadedFilenameToStatusBar(const QString& filename);
+    void setSavedFilenameToStatusBar(const QString& filename);
+    void setModifiedFilenameToStatusBar();
     void setHeartrate(const QMap<int, int>& values);
 
   protected:
@@ -33,9 +38,13 @@ class MainWindow : public QMainWindow
 
     virtual void resizeEvent(QResizeEvent* event);
     virtual void showEvent(QShowEvent* event);
+
     Ui::MainWindow* m_ui;
     DiagramScene* m_scene;
     FileHandler* m_fileHandler;
+
+    QListWidgetItem* m_listEntryHeartrate;
+    QLabel* m_statusWidget;
 };
 
 #endif

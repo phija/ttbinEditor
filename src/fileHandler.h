@@ -1,3 +1,6 @@
+//
+// Copyright 2016 by Philipp Jarvers
+//
 
 #ifndef FILEHANDLER_H_
 #define FILEHANDLER_H_
@@ -14,7 +17,7 @@ class FileHandler : public QObject
 
   public:
     FileHandler(QWidget* parent);
-    virtual ~FileHandler();
+    virtual ~FileHandler() {};
 
     bool readFile(const QString& filename);
     bool saveFile();
@@ -23,6 +26,7 @@ class FileHandler : public QObject
 
   signals:
     void fileLoaded(const QString& filename);
+    void fileSaved(const QString& filename);
     void heartrateLoaded(const QMap<int, int>&);
 
   public slots:

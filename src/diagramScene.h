@@ -60,6 +60,7 @@ class DiagramScene : public QGraphicsScene
     int m_heartrateSpacing;
     int m_minHeartrate;
     int m_maxHeartrate;
+    double m_averageHeartrate;
 };
 
 #endif

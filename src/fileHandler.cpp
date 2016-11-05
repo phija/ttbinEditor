@@ -1,3 +1,6 @@
+//
+// Copyright 2016 by Philipp Jarvers
+//
 
 #include "fileHandler.h"
 #include <QDateTime>
@@ -8,7 +11,7 @@ extern "C"
 }
 
 #include <QFileDialog>
-#include <QDebug>
+#include <QMap>
 #include <QMessageBox>
 
 typedef struct _IO_FILE FILE;
@@ -20,14 +23,9 @@ FileHandler::FileHandler(QWidget* parent) :
 {
 }
 
-FileHandler::~FileHandler()
-{
-}
-
 void FileHandler::slotLoadFile()
 {
   QString fileName = QFileDialog::getOpenFileName(m_parent, tr("Open File"), "", tr("Files (*.ttbin)"));
-  qDebug() << "opening " << fileName;
   if (!fileName.isEmpty())
   {
     readFile(fileName);
@@ -44,18 +42,19 @@ void FileHandler::slotSaveFile()
 
 void FileHandler::slotSaveFileAs()
 {
-  QString fileName = QFileDialog::getSaveFileName(m_parent, tr("Save File As"), "", tr("Files (*.ttbin)"));
-  saveFileAs(fileName);
+  QString filename = QFileDialog::getSaveFileName(m_parent, tr("Save File As"), "", tr("Files (*.ttbin)"));
+  if (!filename.endsWith(".ttbin"))
+  {
+    filename += ".ttbin";
+  }
+  saveFileAs(filename);
 }
 
 void FileHandler::slotSetHeartrateDataToTTBIN(const QMap<int, int>& heartrateData)
 {
-  qDebug() << "set to TTBIN!";
-
   RECORD_ARRAY& array = m_ttbin->heart_rate_records;
   if (array.records != 0 && array.count > 0)
   {
-    qDebug() << "record has" << array.count << "entries.";
     int i = 0;
     int tag = -1;
     QDateTime startTime;
@@ -85,7 +84,7 @@ bool FileHandler::readFile(const QString& filename)
   FILE* input_file = fopen(filename.toLatin1(), "r");
   if (!input_file)
   {
-    qDebug() << "Unable to open input file: " << filename;
+    QMessageBox::warning(m_parent, "Warning", "Unable to open input file: " + filename);
     return false;
   }
 
@@ -98,7 +97,7 @@ bool FileHandler::readFile(const QString& filename)
   }
   if (!m_ttbin)
   {
-    qDebug() << "Unable to read and parse TTBIN file";
+    QMessageBox::warning(m_parent, "Warning", "Unable to read and parse TTBIN file");
     return false;
   }
 
@@ -113,19 +112,19 @@ bool FileHandler::saveFile()
   return saveFileAs(m_filename);
 }
 
-bool FileHandler::saveFileAs(const QString& outFile)
+bool FileHandler::saveFileAs(const QString& outFilename)
 {
-  FILE* output_file = fopen(outFile.toLatin1(), "w");
-  qDebug() << (long)(output_file);
+  m_filename = outFilename;
+  FILE* output_file = fopen(outFilename.toLatin1(), "w");
   if (!output_file)
   {
-    qDebug() << "Unable to open output file: " << outFile;
+    QMessageBox::warning(m_parent, "Warning", "Unable to open output file: " + outFilename);
     return false;
   }
 
   if (!m_ttbin)
   {
-    qDebug() << "Nothing to write out to a file!";
+    QMessageBox::warning(m_parent, "Warning", "Nothing to write out to a file!");
     return false;
   }
   /* write the output file */
@@ -134,6 +133,7 @@ bool FileHandler::saveFileAs(const QString& outFile)
   {
     fclose(output_file);
   }
+  emit fileSaved(m_filename);
   return true;
 }
 
@@ -148,7 +148,6 @@ QMap<int, int> FileHandler::convertRecordsHeartrate(RECORD_ARRAY array)
   QMap<int, int> values;
   if (array.records != 0 && array.count > 0)
   {
-    qDebug() << "record has" << array.count << "entries.";
     int i = 0;
     int tag = -1;
     QDateTime startTime;
@@ -162,7 +161,6 @@ QMap<int, int> FileHandler::convertRecordsHeartrate(RECORD_ARRAY array)
       if (record != 0 && tag == record->tag)
       {
         QDateTime dateTime = QDateTime::fromTime_t(record->heart_rate.timestamp);
-        //qDebug() << "  adding:" << dateTime.toString("dd HH:mm:ss") << " hr:" << record->heart_rate.heart_rate << " ptr:" << (long)record << " length:" << record->length << record->tag;
         values.insert(startTime.secsTo(dateTime), record->heart_rate.heart_rate);
         ++i;
       }

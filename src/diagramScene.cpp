@@ -7,7 +7,6 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QDateTime>
-#include <QDebug>
 
 #include <math.h>
 
@@ -23,7 +22,8 @@ DiagramScene::DiagramScene() :
   m_yDelta(0),
   m_heartrateSpacing(10),
   m_minHeartrate(0),
-  m_maxHeartrate(0)
+  m_maxHeartrate(0),
+  m_averageHeartrate(0)
 {
   m_xAxis = new QGraphicsLineItem(0,0,200,0);
   m_yAxis = new QGraphicsLineItem(0,0,0,200);
@@ -31,7 +31,7 @@ DiagramScene::DiagramScene() :
   addItem(m_xAxis);
   addItem(m_yAxis);
 
-  QGraphicsSimpleTextItem* textItem = new QGraphicsSimpleTextItem("min/max:");
+  QGraphicsSimpleTextItem* textItem = new QGraphicsSimpleTextItem("min/max (avg):");
   textItem->setPos(-30, -50);
   textItem->setTransform(QTransform().scale(1, -1));
   addItem(textItem);
@@ -125,8 +125,10 @@ void DiagramScene::calculateHeartrateData(const QMap<int, int>& data)
     m_minHeartrate = INT_MAX;
     m_maxHeartrate = 0;
 
+    m_averageHeartrate = 0;
     for (QMap<int, int>::const_iterator it = m_heartrateData.begin(); it != m_heartrateData.end(); ++it)
     {
+      m_averageHeartrate += it.value();
       if (it.value() < m_minHeartrate)
       {
         m_minHeartrate = it.value();
@@ -136,6 +138,7 @@ void DiagramScene::calculateHeartrateData(const QMap<int, int>& data)
         m_maxHeartrate = it.value();
       }
     }
+    m_averageHeartrate /= m_heartrateData.size();
   }
 
   int secsDelta = m_heartrateData.size() > 0 ? (m_heartrateData.lastKey() - m_heartrateData.firstKey()) : 0;
@@ -183,11 +186,12 @@ void DiagramScene::reCalculateAndShowHeartrate()
 
 void DiagramScene::setLegend()
 {
-  QString hrText = QString::number(m_minHeartrate) + "/" + QString::number(m_maxHeartrate);
+  QString hrText = QString::number(m_minHeartrate) + "/" + QString::number(m_maxHeartrate) +
+                   " (" + QString::number(qRound(m_averageHeartrate))+ ")";
   if (m_labelHeartrate == 0)
   {
     m_labelHeartrate = new QGraphicsSimpleTextItem();
-    m_labelHeartrate->setPos(40, -50);
+    m_labelHeartrate->setPos(80, -50);
     m_labelHeartrate->setTransform(QTransform().scale(1, -1));
     QFont font;
     font.setBold(true);
