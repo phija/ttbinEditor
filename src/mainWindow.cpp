@@ -6,6 +6,9 @@
 #include <QGraphicsView>
 #include <QLabel>
 #include <QMessageBox>
+#include <climits>
+
+char static_assert_float32[1 - (2 * ((sizeof(float) * CHAR_BIT) != 32))];
 
 #include "mainWindow.h"
 #include "ui_mainWindow.h"
@@ -37,6 +40,8 @@ MainWindow::MainWindow() :
 
   m_fileHandler = new FileHandler(this);
 
+  m_ui->listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+
   connectMenu();
 
   m_statusWidget = new QLabel("Load a ttbin file to start.");
@@ -51,11 +56,13 @@ void MainWindow::connectMenu()
   QObject::connect(m_ui->actionQuit, SIGNAL(triggered()), SLOT(close()));
   QObject::connect(m_ui->actionHelp, SIGNAL(triggered()), SLOT(showHelp()));
   QObject::connect(m_ui->actionAbout, SIGNAL(triggered()), SLOT(showAbout()));
+  QObject::connect(m_fileHandler, SIGNAL(fileLoaded(QString)), SLOT(cleanData()));
   QObject::connect(m_fileHandler, SIGNAL(fileLoaded(QString)), SLOT(setLoadedFilenameToStatusBar(QString)));
   QObject::connect(m_fileHandler, SIGNAL(fileSaved(QString)), SLOT(setSavedFilenameToStatusBar(QString)));
-  QObject::connect(m_fileHandler, SIGNAL(heartrateLoaded(QMap<int, int>)), SLOT(setHeartrate(QMap<int, int>)));
+  QObject::connect(m_fileHandler, SIGNAL(loaded(QMap<int, int>,QString,QColor)), SLOT(addEntry(QMap<int, int>,QString,QColor)));
   QObject::connect(m_scene, SIGNAL(signalHeartrateChanged(QMap<int, int>)), m_fileHandler, SLOT(slotSetHeartrateDataToTTBIN(QMap<int, int>)));
   QObject::connect(m_scene, SIGNAL(signalHeartrateChanged(QMap<int, int>)), SLOT(setModifiedFilenameToStatusBar()));
+  QObject::connect(m_ui->listWidget, SIGNAL(itemSelectionChanged()), SLOT(selectionChanged()));
 }
 
 void MainWindow::showAbout()
@@ -91,22 +98,45 @@ void MainWindow::setModifiedFilenameToStatusBar()
   }
 }
 
-void MainWindow::setHeartrate(const QMap<int, int>& values)
+void MainWindow::cleanData()
 {
-  if (m_listEntryHeartrate != 0)
-  {
-    m_ui->listWidget->removeItemWidget(m_listEntryHeartrate);
-    delete m_listEntryHeartrate;
-  }
-  m_listEntryHeartrate = new QListWidgetItem("heartrate (" + QString::number(values.count()) + " entries)");
-  m_ui->listWidget->addItem(m_listEntryHeartrate);
-  m_ui->listWidget->setItemSelected(m_listEntryHeartrate, true);
+  qDeleteAll(m_diagramData.keys());
+  m_diagramData.clear();
+  m_ui->listWidget->setItemSelected(0, false);
+}
 
-  m_scene->calculateHeartrateData(values);
-  m_scene->setXTicks();
-  m_scene->setYTicks();
-  m_scene->showHeartrate();
-  m_scene->setLegend();
+void MainWindow::selectionChanged()
+{
+  if (m_ui->listWidget->selectedItems().size() == 0) return;
+
+  QListWidgetItem* item = m_ui->listWidget->selectedItems().first();
+  if (item != 0)
+  {
+    QHash<QListWidgetItem*, CurveData>::iterator iterator = m_diagramData.find(item);
+    if (iterator != m_diagramData.end())
+    {
+      CurveData& data = iterator.value();
+      m_scene->setAndCalculateData(data.m_values, data.m_color);
+      m_scene->setXTicks();
+      m_scene->setYTicks();
+      m_scene->showCurve();
+      m_scene->setLegend();
+    }
+  }
+}
+
+void MainWindow::addEntry(const QMap<int, int>& values, const QString& title, const QColor& color)
+{
+  QListWidgetItem* listEntry = new QListWidgetItem(title + " (" + QString::number(values.count()) + " entries)");
+  m_ui->listWidget->addItem(listEntry);
+
+  m_diagramData.insert(listEntry, CurveData(values, color));
+
+  // select item if nothing is yet selected
+  if (m_ui->listWidget->selectedItems().isEmpty())
+  {
+    m_ui->listWidget->setItemSelected(listEntry, true);
+  }
 }
 
 void MainWindow::resizeEvent(QResizeEvent* event)

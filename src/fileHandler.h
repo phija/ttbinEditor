@@ -2,8 +2,8 @@
 // Copyright 2016 by Philipp Jarvers
 //
 
-#ifndef FILEHANDLER_H_
-#define FILEHANDLER_H_
+#ifndef FILEHANDLER_H
+#define FILEHANDLER_H
 
 #include <QObject>
 extern "C"
@@ -27,7 +27,7 @@ class FileHandler : public QObject
   signals:
     void fileLoaded(const QString& filename);
     void fileSaved(const QString& filename);
-    void heartrateLoaded(const QMap<int, int>&);
+    void loaded(const QMap<int, int>&, const QString&, const QColor&);
 
   public slots:
     void slotLoadFile();
@@ -37,6 +37,8 @@ class FileHandler : public QObject
 
   protected:
     QMap<int, int> convertRecordsHeartrate(RECORD_ARRAY array);
+    QMap<int, int> convertGpsRecordsToSpeed(RECORD_ARRAY array);
+//    QMap<int, int> convertAltRecordsToElevation(RECORD_ARRAY array);
 
     QWidget* m_parent;
 

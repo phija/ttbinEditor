@@ -2,8 +2,8 @@
 // Copyright 2016 by Philipp Jarvers
 //
 
-#ifndef DIAGRAMSCENE_H_
-#define DIAGRAMSCENE_H_
+#ifndef DIAGRAMSCENE_H
+#define DIAGRAMSCENE_H
 
 #include <QGraphicsScene>
 #include <QMap>
@@ -19,8 +19,8 @@ class DiagramScene : public QGraphicsScene
 
     void adjustDiagram(int width, int height);
 
-    void calculateHeartrateData(const QMap<int, int>& data);
-    void showHeartrate();
+    void setAndCalculateData(const QMap<int, int>& data, const QColor& color);
+    void showCurve();
     void reCalculateAndShowHeartrate();
 
     void setXTicks();
@@ -53,7 +53,8 @@ class DiagramScene : public QGraphicsScene
     QGraphicsSimpleTextItem* m_labelHeartrate;
 
     QGraphicsPathItem* m_curve;
-    QMap<int, int> m_heartrateData;
+    QMap<int, int> m_data;
+    QColor m_color;
 
     double m_xFactor;
     double m_yDelta;

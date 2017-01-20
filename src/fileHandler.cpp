@@ -13,6 +13,7 @@ extern "C"
 #include <QFileDialog>
 #include <QMap>
 #include <QMessageBox>
+#include <QDebug>
 
 typedef struct _IO_FILE FILE;
 
@@ -103,7 +104,9 @@ bool FileHandler::readFile(const QString& filename)
 
   m_filename = filename;
   emit fileLoaded(filename);
-  emit heartrateLoaded(convertRecordsHeartrate(m_ttbin->heart_rate_records));
+  emit loaded(convertRecordsHeartrate(m_ttbin->heart_rate_records), "heartrate", Qt::red);
+  emit loaded(convertGpsRecordsToSpeed(m_ttbin->gps_records), "speed", Qt::blue);
+//  emit loaded(convertAltRecordsToElevation(m_ttbin->altitude_records), "elevation", Qt::green);
   return true;
 }
 
@@ -168,4 +171,57 @@ QMap<int, int> FileHandler::convertRecordsHeartrate(RECORD_ARRAY array)
   }
   return values;
 }
+
+QMap<int, int> FileHandler::convertGpsRecordsToSpeed(RECORD_ARRAY array)
+{
+  QMap<int, int> values;
+  if (array.records != 0 && array.count > 0)
+  {
+    int i = 0;
+    int tag = -1;
+    QDateTime startTime;
+    for (TTBIN_RECORD* record = *array.records; i < array.count; record = record->next)
+    {
+      if (tag < 0)
+      {
+        tag = record->tag;
+        startTime = QDateTime::fromTime_t(record->gps.timestamp);
+      }
+      if (record != 0 && tag == record->tag)
+      {
+        QDateTime dateTime = QDateTime::fromTime_t(record->gps.timestamp);
+        values.insert(startTime.secsTo(dateTime), record->gps.gps_speed);
+        ++i;
+      }
+    }
+  }
+  return values;
+}
+
+//QMap<int, int> FileHandler::convertAltRecordsToElevation(RECORD_ARRAY array)
+//{
+//  QMap<int, int> values;
+//  if (array.records != 0 && array.count > 0)
+//  {
+//    int i = 0;
+//    int tag = -1;
+//    QDateTime startTime;
+//    for (TTBIN_RECORD* record = *array.records; i < array.count; record = record->next)
+//    {
+//      if (tag < 0)
+//      {
+//        tag = record->tag;
+//        //startTime = QDateTime::fromTime_t(record->altitude.timestamp);
+//      }
+//      if (record != 0 && tag == record->tag)
+//      {
+//        //QDateTime dateTime = QDateTime::fromTime_t(record->gps.timestamp);
+//        values.insert(i, record->altitude.rel_altitude);
+//        qDebug() << record->altitude.rel_altitude;
+//        ++i;
+//      }
+//    }
+//  }
+//  return values;
+//}
 

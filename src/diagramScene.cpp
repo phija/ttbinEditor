@@ -60,7 +60,7 @@ void DiagramScene::setXTicks()
     qDeleteAll(m_xAxisTicks);
     m_xAxisTicks.clear();
   }
-  if (m_heartrateData.size() > 0)
+  if (m_data.size() > 0)
   {
     int stepSize = 5; // heartrate
     int startHr = floor((m_minHeartrate - m_heartrateSpacing)/(double)stepSize) * stepSize;
@@ -92,11 +92,11 @@ void DiagramScene::setYTicks()
     qDeleteAll(m_yAxisTicks);
     m_yAxisTicks.clear();
   }
-  if (m_heartrateData.size() > 0)
+  if (m_data.size() > 0)
   {
     int stepSize = 300; // seconds
     int startSec = 0;
-    int stopSec = m_heartrateData.lastKey()/(double)stepSize * stepSize;
+    int stopSec = m_data.lastKey()/(double)stepSize * stepSize;
 
     int maxY = sceneRect().height();
 
@@ -115,18 +115,19 @@ void DiagramScene::setYTicks()
   }
 }
 
-void DiagramScene::calculateHeartrateData(const QMap<int, int>& data)
+void DiagramScene::setAndCalculateData(const QMap<int, int>& data, const QColor& color)
 {
-  m_heartrateData = data;
+  m_data = data;
+  m_color = color;
   int heartrateSpacing = 10;
 
-  if (m_heartrateData.size() > 0)
+  if (m_data.size() > 0)
   {
     m_minHeartrate = INT_MAX;
     m_maxHeartrate = 0;
 
     m_averageHeartrate = 0;
-    for (QMap<int, int>::const_iterator it = m_heartrateData.begin(); it != m_heartrateData.end(); ++it)
+    for (QMap<int, int>::const_iterator it = m_data.begin(); it != m_data.end(); ++it)
     {
       m_averageHeartrate += it.value();
       if (it.value() < m_minHeartrate)
@@ -138,31 +139,32 @@ void DiagramScene::calculateHeartrateData(const QMap<int, int>& data)
         m_maxHeartrate = it.value();
       }
     }
-    m_averageHeartrate /= m_heartrateData.size();
+    m_averageHeartrate /= m_data.size();
   }
 
-  int secsDelta = m_heartrateData.size() > 0 ? (m_heartrateData.lastKey() - m_heartrateData.firstKey()) : 0;
+  int secsDelta = m_data.size() > 0 ? (m_data.lastKey() - m_data.firstKey()) : 0;
   m_xFactor = secsDelta / m_xAxis->line().length();
 
   m_yDelta = (m_maxHeartrate - m_minHeartrate + 2 * m_heartrateSpacing)/m_yAxis->line().length();
 }
 
-void DiagramScene::showHeartrate()
+void DiagramScene::showCurve()
 {
   if (m_curve != 0)
   {
     delete m_curve;
+    m_curve = 0;
   }
-  if (m_heartrateData.size() > 0)
+  if (m_data.size() > 0)
   {
     m_curve = new QGraphicsPathItem();
 
     int minHeartrate = m_minHeartrate - m_heartrateSpacing;
-    int xStart = m_heartrateData.firstKey();
+    int xStart = m_data.firstKey();
 
-    QPainterPath path(QPointF(0, (m_heartrateData.begin().value() - minHeartrate)/m_yDelta));
+    QPainterPath path(QPointF(0, (m_data.begin().value() - minHeartrate)/m_yDelta));
 
-    for (QMap<int, int>::const_iterator it = m_heartrateData.begin(); it != m_heartrateData.end(); ++it)
+    for (QMap<int, int>::const_iterator it = m_data.begin(); it != m_data.end(); ++it)
     {
       int secs = it.key() - xStart;
       QPointF p(secs/m_xFactor, (it.value() - minHeartrate)/m_yDelta);
@@ -170,7 +172,7 @@ void DiagramScene::showHeartrate()
     }
 
     m_curve->setPath(path);
-    m_curve->setPen(QPen(Qt::red, 1));
+    m_curve->setPen(QPen(m_color, 1));
     m_curve->setVisible(true);
     addItem(m_curve);
   }
@@ -178,10 +180,10 @@ void DiagramScene::showHeartrate()
 
 void DiagramScene::reCalculateAndShowHeartrate()
 {
-  calculateHeartrateData(m_heartrateData);
+  setAndCalculateData(m_data, m_color);
   setXTicks();
   setYTicks();
-  showHeartrate();
+  showCurve();
 }
 
 void DiagramScene::setLegend()
@@ -211,14 +213,14 @@ void DiagramScene::mouseMoveEvent(QGraphicsSceneMouseEvent* mouseEvent)
     int heartrate = yToHeartrate(mouseEvent->scenePos().y());
     int start = qMax(0, minSecs - (int)ceil(m_xFactor));
 
-    QMap<int, int>::iterator i = m_heartrateData.find(start);
-    while (i != m_heartrateData.end() && i.key() <= maxSecs)
+    QMap<int, int>::iterator i = m_data.find(start);
+    while (i != m_data.end() && i.key() <= maxSecs)
     {
       i.value() = heartrate;
       ++i;
     }
 
-    showHeartrate();
+    showCurve();
   }
 }
 
@@ -227,7 +229,7 @@ void DiagramScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* mouseEvent)
   adjustDiagram(views().first()->width(), views().first()->height());
   reCalculateAndShowHeartrate();
   setLegend();
-  emit signalHeartrateChanged(m_heartrateData);
+  emit signalHeartrateChanged(m_data);
 }
 
 int DiagramScene::xToSecond(int x) const

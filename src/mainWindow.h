@@ -6,6 +6,7 @@
 #define MAIN_WINDOW_H
 
 #include <QMainWindow>
+#include "curveData.h"
 
 class DiagramScene;
 class FileHandler;
@@ -31,7 +32,9 @@ class MainWindow : public QMainWindow
     void setLoadedFilenameToStatusBar(const QString& filename);
     void setSavedFilenameToStatusBar(const QString& filename);
     void setModifiedFilenameToStatusBar();
-    void setHeartrate(const QMap<int, int>& values);
+    void addEntry(const QMap<int, int>& values, const QString& title, const QColor& color);
+    void selectionChanged();
+    void cleanData();
 
   protected:
     void connectMenu();
@@ -43,7 +46,10 @@ class MainWindow : public QMainWindow
     DiagramScene* m_scene;
     FileHandler* m_fileHandler;
 
+    QHash<QListWidgetItem*, CurveData> m_diagramData;
+
     QListWidgetItem* m_listEntryHeartrate;
+    QListWidgetItem* m_listEntrySpeed;
     QLabel* m_statusWidget;
 };
 
