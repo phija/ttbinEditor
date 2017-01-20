@@ -15,7 +15,7 @@ char static_assert_float32[1 - (2 * ((sizeof(float) * CHAR_BIT) != 32))];
 #include "diagramScene.h"
 #include "fileHandler.h"
 
-static QString VERSION = "0.2";
+static QString VERSION = "0.3";
 
 MainWindow::MainWindow() :
   QMainWindow(0),
@@ -67,7 +67,7 @@ void MainWindow::connectMenu()
 
 void MainWindow::showAbout()
 {
-  QMessageBox::about(this, "About ttbinEditor", "This is ttbinEditor version " + VERSION + ".\n\nCopyright 2016 by Philipp Jarvers.");
+  QMessageBox::about(this, "About ttbinEditor", "This is ttbinEditor version " + VERSION + ".\n\nCopyright 2017 by Philipp Jarvers.");
 }
 
 void MainWindow::showHelp()
