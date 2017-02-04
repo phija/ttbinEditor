@@ -40,6 +40,16 @@ Therefor my thanks go directly to him, thanks Ryan!
 Realease Notes
 ==============
 
+2017-02-04   Version 0.4
+------------------------
+
+* added a simple filter and equalizer to see especially the speed in a nicer way
+
+2017-01-20   Version 0.3
+------------------------
+
+* added chosable item in the selection list to see the speed from a ttbin file
+
 2016-11-6    Version 0.2
 ------------------------
 
