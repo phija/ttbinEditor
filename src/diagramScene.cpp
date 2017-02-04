@@ -7,6 +7,7 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QDateTime>
+#include <QDebug>
 
 #include <math.h>
 
@@ -16,14 +17,14 @@ DiagramScene::DiagramScene() :
   m_spaceY(50),
   m_xTopSpace(40),
   m_yTopSpace(40),
-  m_labelHeartrate(0),
+  m_labelValue(0),
   m_curve(0),
   m_xFactor(0),
   m_yDelta(0),
-  m_heartrateSpacing(10),
-  m_minHeartrate(0),
-  m_maxHeartrate(0),
-  m_averageHeartrate(0)
+  m_TopBottomSpacing(10),
+  m_minValue(0),
+  m_maxValue(0),
+  m_averageValue(0)
 {
   m_xAxis = new QGraphicsLineItem(0,0,200,0);
   m_yAxis = new QGraphicsLineItem(0,0,0,200);
@@ -62,15 +63,15 @@ void DiagramScene::setXTicks()
   }
   if (m_data.size() > 0)
   {
-    int stepSize = 5; // heartrate
-    int startHr = floor((m_minHeartrate - m_heartrateSpacing)/(double)stepSize) * stepSize;
-    int stopHr = floor((m_maxHeartrate + m_heartrateSpacing)/(double)stepSize) * stepSize;
+    int stepSize = 50.0 * m_yDelta;
+    int startValue = floor((m_minValue - m_TopBottomSpacing)/(double)stepSize) * stepSize;
+    int stopValue = floor((m_maxValue + m_TopBottomSpacing)/(double)stepSize) * stepSize;
 
     int maxX = sceneRect().width();
 
-    for (int i = startHr; i <= stopHr; i += stepSize)
+    for (int i = startValue; i <= stopValue; i += stepSize)
     {
-      int y = heartrateToY(i);
+      int y = valueToY(i);
       if (y <= 0) continue;
       QGraphicsLineItem* line = new QGraphicsLineItem(-5, y, maxX - m_xTopSpace, y);
       line->setPen(QPen(Qt::gray));
@@ -115,37 +116,45 @@ void DiagramScene::setYTicks()
   }
 }
 
-void DiagramScene::setAndCalculateData(const QMap<int, int>& data, const QColor& color)
+void DiagramScene::setAndCalculateData(const QMap<int, int>& data, const QColor& color, bool keepOldMinMax)
 {
   m_data = data;
   m_color = color;
-  int heartrateSpacing = 10;
 
   if (m_data.size() > 0)
   {
-    m_minHeartrate = INT_MAX;
-    m_maxHeartrate = 0;
+    if (!keepOldMinMax)
+    {
+      m_minValue = INT_MAX;
+      m_maxValue = 0;
+    }
 
-    m_averageHeartrate = 0;
+    m_averageValue = 0;
     for (QMap<int, int>::const_iterator it = m_data.begin(); it != m_data.end(); ++it)
     {
-      m_averageHeartrate += it.value();
-      if (it.value() < m_minHeartrate)
+      m_averageValue += it.value();
+      if (!keepOldMinMax)
       {
-        m_minHeartrate = it.value();
-      }
-      if (it.value() > m_maxHeartrate)
-      {
-        m_maxHeartrate = it.value();
+        if (it.value() < m_minValue)
+        {
+          m_minValue = it.value();
+        }
+        if (it.value() > m_maxValue)
+        {
+          m_maxValue = it.value();
+        }
       }
     }
-    m_averageHeartrate /= m_data.size();
+    m_averageValue /= m_data.size();
   }
 
   int secsDelta = m_data.size() > 0 ? (m_data.lastKey() - m_data.firstKey()) : 0;
   m_xFactor = secsDelta / m_xAxis->line().length();
 
-  m_yDelta = (m_maxHeartrate - m_minHeartrate + 2 * m_heartrateSpacing)/m_yAxis->line().length();
+  if (!keepOldMinMax)
+  {
+    m_yDelta = (m_maxValue - m_minValue + 2 * m_TopBottomSpacing)/m_yAxis->line().length();
+  }
 }
 
 void DiagramScene::showCurve()
@@ -159,7 +168,7 @@ void DiagramScene::showCurve()
   {
     m_curve = new QGraphicsPathItem();
 
-    int minHeartrate = m_minHeartrate - m_heartrateSpacing;
+    int minHeartrate = m_minValue - m_TopBottomSpacing;
     int xStart = m_data.firstKey();
 
     QPainterPath path(QPointF(0, (m_data.begin().value() - minHeartrate)/m_yDelta));
@@ -178,7 +187,7 @@ void DiagramScene::showCurve()
   }
 }
 
-void DiagramScene::reCalculateAndShowHeartrate()
+void DiagramScene::reCalculateAndShowValues()
 {
   setAndCalculateData(m_data, m_color);
   setXTicks();
@@ -188,20 +197,20 @@ void DiagramScene::reCalculateAndShowHeartrate()
 
 void DiagramScene::setLegend()
 {
-  QString hrText = QString::number(m_minHeartrate) + "/" + QString::number(m_maxHeartrate) +
-                   " (" + QString::number(qRound(m_averageHeartrate))+ ")";
-  if (m_labelHeartrate == 0)
+  QString hrText = QString::number(m_minValue) + "/" + QString::number(m_maxValue) +
+                   " (" + QString::number(qRound(m_averageValue))+ ")";
+  if (m_labelValue == 0)
   {
-    m_labelHeartrate = new QGraphicsSimpleTextItem();
-    m_labelHeartrate->setPos(80, -50);
-    m_labelHeartrate->setTransform(QTransform().scale(1, -1));
+    m_labelValue = new QGraphicsSimpleTextItem();
+    m_labelValue->setPos(80, -50);
+    m_labelValue->setTransform(QTransform().scale(1, -1));
     QFont font;
     font.setBold(true);
-    m_labelHeartrate->setFont(font);
-    addItem(m_labelHeartrate);
+    m_labelValue->setFont(font);
+    addItem(m_labelValue);
   }
 
-  m_labelHeartrate->setText(hrText);
+  m_labelValue->setText(hrText);
 }
 
 void DiagramScene::mouseMoveEvent(QGraphicsSceneMouseEvent* mouseEvent)
@@ -210,7 +219,7 @@ void DiagramScene::mouseMoveEvent(QGraphicsSceneMouseEvent* mouseEvent)
   {
     int minSecs = qMin(xToSecond(mouseEvent->lastScenePos().x()), xToSecond(mouseEvent->scenePos().x()));
     int maxSecs = qMax(xToSecond(mouseEvent->lastScenePos().x()), xToSecond(mouseEvent->scenePos().x()));
-    int heartrate = yToHeartrate(mouseEvent->scenePos().y());
+    int heartrate = yToValue(mouseEvent->scenePos().y());
     int start = qMax(0, minSecs - (int)ceil(m_xFactor));
 
     QMap<int, int>::iterator i = m_data.find(start);
@@ -227,9 +236,9 @@ void DiagramScene::mouseMoveEvent(QGraphicsSceneMouseEvent* mouseEvent)
 void DiagramScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* mouseEvent)
 {
   adjustDiagram(views().first()->width(), views().first()->height());
-  reCalculateAndShowHeartrate();
+  reCalculateAndShowValues();
   setLegend();
-  emit signalHeartrateChanged(m_data);
+  emit signalValuesChanged(m_data);
 }
 
 int DiagramScene::xToSecond(int x) const
@@ -239,21 +248,24 @@ int DiagramScene::xToSecond(int x) const
   return qRound(x * m_xFactor);
 }
 
-int DiagramScene::yToHeartrate(int y) const
-{
-  // y = (heartrate - minHeartrate)/deltaY
-  // <=> heartrate = y * deltaY + minHeartrate
-  return qRound(y * m_yDelta + (m_minHeartrate - m_heartrateSpacing));
-}
-
-int DiagramScene::heartrateToY(int hr) const
-{
-  // y = (heartrate - minHeartrate)/deltaY
-  // <=> heartrate = y * deltaY + minHeartrate
-  return qRound((hr - (m_minHeartrate - m_heartrateSpacing))/m_yDelta);
-}
-
 int DiagramScene::secondToX(int second) const
 {
   return qRound(second/m_xFactor);
 }
+
+int DiagramScene::yToValue(int y) const
+{
+  // e.g. for heartrates:
+  // y = (heartrate - minHeartrate)/deltaY
+  // <=> heartrate = y * deltaY + minHeartrate
+  return qRound(y * m_yDelta + (m_minValue - m_TopBottomSpacing));
+}
+
+int DiagramScene::valueToY(int value) const
+{
+  // e.g. for heartrates:
+  // y = (heartrate - minHeartrate)/deltaY
+  // <=> heartrate = y * deltaY + minHeartrate
+  return qRound((value - (m_minValue - m_TopBottomSpacing))/m_yDelta);
+}
+

@@ -19,9 +19,9 @@ class DiagramScene : public QGraphicsScene
 
     void adjustDiagram(int width, int height);
 
-    void setAndCalculateData(const QMap<int, int>& data, const QColor& color);
+    void setAndCalculateData(const QMap<int, int>& data, const QColor& color, bool keepOldMinMax = false);
     void showCurve();
-    void reCalculateAndShowHeartrate();
+    void reCalculateAndShowValues();
 
     void setXTicks();
     void setYTicks();
@@ -29,15 +29,15 @@ class DiagramScene : public QGraphicsScene
     void setLegend();
 
   signals:
-    void signalHeartrateChanged(const QMap<int, int>&);
+    void signalValuesChanged(const QMap<int, int>&);
 
   protected:
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent* mouseEvent);
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent* mouseEvent);
 
     int xToSecond(int x) const;
-    int yToHeartrate(int y) const;
-    int heartrateToY(int hr) const;
+    int yToValue(int y) const;
+    int valueToY(int hr) const;
     int secondToX(int second) const;
 
     int m_spaceX;
@@ -50,7 +50,7 @@ class DiagramScene : public QGraphicsScene
     QList<QGraphicsLineItem*> m_xAxisTicks;
     QList<QGraphicsLineItem*> m_yAxisTicks;
 
-    QGraphicsSimpleTextItem* m_labelHeartrate;
+    QGraphicsSimpleTextItem* m_labelValue;
 
     QGraphicsPathItem* m_curve;
     QMap<int, int> m_data;
@@ -58,10 +58,10 @@ class DiagramScene : public QGraphicsScene
 
     double m_xFactor;
     double m_yDelta;
-    int m_heartrateSpacing;
-    int m_minHeartrate;
-    int m_maxHeartrate;
-    double m_averageHeartrate;
+    int m_TopBottomSpacing;
+    int m_minValue;
+    int m_maxValue;
+    double m_averageValue;
 };
 
 #endif

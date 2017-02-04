@@ -6,7 +6,15 @@ add_library(libttbin STATIC ${TTBIN_SRC})
 target_link_libraries(libttbin ${CURL_LIBRARIES})
 set_target_properties(libttbin PROPERTIES OUTPUT_NAME ttbin)
 
-add_executable(ttbinEditor main.cpp mainWindow.cpp curveData.cpp diagramScene.cpp fileHandler.cpp ${forms})
+add_executable(
+  ttbinEditor 
+  main.cpp 
+  mainWindow.cpp 
+  curveData.cpp 
+  diagramScene.cpp 
+  fileHandler.cpp 
+  dataProcessor.cpp 
+  ${forms})
 
 # Use the Widgets module from Qt 5.
 target_link_libraries(ttbinEditor Qt5::Core Qt5::Widgets Qt5::Gui libttbin m ${CURL_LIBRARIES})

@@ -15,7 +15,7 @@ char static_assert_float32[1 - (2 * ((sizeof(float) * CHAR_BIT) != 32))];
 #include "diagramScene.h"
 #include "fileHandler.h"
 
-static QString VERSION = "0.3";
+static QString VERSION = "0.4";
 
 MainWindow::MainWindow() :
   QMainWindow(0),
@@ -39,6 +39,7 @@ MainWindow::MainWindow() :
   m_ui->graphicsView->setMouseTracking(true);
 
   m_fileHandler = new FileHandler(this);
+  m_dataProcessor = new DataProcessor(20.0, 0.8, 5);
 
   m_ui->listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
 
@@ -60,9 +61,14 @@ void MainWindow::connectMenu()
   QObject::connect(m_fileHandler, SIGNAL(fileLoaded(QString)), SLOT(setLoadedFilenameToStatusBar(QString)));
   QObject::connect(m_fileHandler, SIGNAL(fileSaved(QString)), SLOT(setSavedFilenameToStatusBar(QString)));
   QObject::connect(m_fileHandler, SIGNAL(loaded(QMap<int, int>,QString,QColor)), SLOT(addEntry(QMap<int, int>,QString,QColor)));
-  QObject::connect(m_scene, SIGNAL(signalHeartrateChanged(QMap<int, int>)), m_fileHandler, SLOT(slotSetHeartrateDataToTTBIN(QMap<int, int>)));
-  QObject::connect(m_scene, SIGNAL(signalHeartrateChanged(QMap<int, int>)), SLOT(setModifiedFilenameToStatusBar()));
+  QObject::connect(m_scene, SIGNAL(signalValuesChanged(QMap<int, int>)), m_fileHandler, SLOT(slotSetHeartrateDataToTTBIN(QMap<int, int>)));
+  QObject::connect(m_scene, SIGNAL(signalValuesChanged(QMap<int, int>)), SLOT(setModifiedFilenameToStatusBar()));
   QObject::connect(m_ui->listWidget, SIGNAL(itemSelectionChanged()), SLOT(selectionChanged()));
+
+  QObject::connect(m_ui->applyFilterButton, SIGNAL(toggled(bool)), SLOT(slotApplyFilter(bool)));
+  QObject::connect(m_ui->sliderWeight, SIGNAL(valueChanged(int)), SLOT(slotWeightChanged(int)));
+  QObject::connect(m_ui->sliderFilter, SIGNAL(valueChanged(int)), SLOT(slotFilterChanged(int)));
+  QObject::connect(m_ui->sliderAverage, SIGNAL(valueChanged(int)), SLOT(slotAverageChanged(int)));
 }
 
 void MainWindow::showAbout()
@@ -105,7 +111,38 @@ void MainWindow::cleanData()
   m_ui->listWidget->setItemSelected(0, false);
 }
 
+void MainWindow::slotApplyFilter(bool useFilter)
+{
+  setSelectedData(useFilter, false);
+}
+
+void MainWindow::slotWeightChanged(int value)
+{
+  m_dataProcessor->setWeight((double)value/100.0);
+}
+
+void MainWindow::slotFilterChanged(int value)
+{
+  m_dataProcessor->setFilter(value);
+}
+
+void MainWindow::slotAverageChanged(int value)
+{
+  m_dataProcessor->setAverage(value);
+}
+
 void MainWindow::selectionChanged()
+{
+  resetFilter();
+  setSelectedData(false, true);
+}
+
+void MainWindow::resetFilter()
+{
+  m_ui->applyFilterButton->setChecked(false);
+}
+
+void MainWindow::setSelectedData(bool useFilter, bool resetAxes)
 {
   if (m_ui->listWidget->selectedItems().size() == 0) return;
 
@@ -116,9 +153,21 @@ void MainWindow::selectionChanged()
     if (iterator != m_diagramData.end())
     {
       CurveData& data = iterator.value();
-      m_scene->setAndCalculateData(data.m_values, data.m_color);
-      m_scene->setXTicks();
-      m_scene->setYTicks();
+      if (useFilter)
+      {
+        m_scene->setAndCalculateData(m_dataProcessor->processData(data.m_values), data.m_color, true);
+      }
+      else
+      {
+        m_scene->setAndCalculateData(data.m_values, data.m_color);
+      }
+
+      if (resetAxes)
+      {
+        m_scene->setXTicks();
+        m_scene->setYTicks();
+      }
+
       m_scene->showCurve();
       m_scene->setLegend();
     }
@@ -143,7 +192,7 @@ void MainWindow::resizeEvent(QResizeEvent* event)
 {
   QMainWindow::resizeEvent(event);
   m_scene->adjustDiagram(m_ui->graphicsView->width(), m_ui->graphicsView->height());
-  m_scene->reCalculateAndShowHeartrate();
+  m_scene->reCalculateAndShowValues();
   m_scene->setLegend();
 }
 
